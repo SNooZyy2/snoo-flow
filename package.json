@@ -5,7 +5,7 @@
   "description": "Close the learning loop — make snoo-flow learn from its own experience",
   "scripts": {
     "build": "tsc",
-    "test": "tsx --test tests/**/*.test.js",
+    "test": "tsx --test tests/*.test.js",
     "lint": "tsc --noEmit",
     "research": "node scripts/research-query.js",
     "snoo": "tsx scripts/run.ts",
