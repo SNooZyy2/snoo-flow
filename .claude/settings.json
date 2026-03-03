@@ -21,6 +21,16 @@
             "timeout": 5000
           }
         ]
+      },
+      {
+        "matcher": "^(Edit|Write|Agent)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/record-tool.sh",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
@@ -30,6 +40,16 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/record.sh",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "^(Edit|Write|Agent)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/record-tool.sh",
             "timeout": 5000
           }
         ]
