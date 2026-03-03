@@ -2,7 +2,7 @@
 
 ## What This Is
 
-MVP prototype that fixes the 8 breaks preventing claude-flow from learning from its own experience. The full feedback loop:
+MVP prototype that fixes the 8 breaks preventing snoo-flow from learning from its own experience. The full feedback loop:
 
 ```
 pre-task → AI works → post-task → judge → distill → consolidate
@@ -167,6 +167,10 @@ WHERE f.relative_path LIKE '%target%' AND fi.category LIKE '%facade%';
 - NEVER commit .env files
 - Optional LLM judge requires API key via env var, not hardcoded
 - PII scrubber runs on all distilled memories before storage
+
+## Git
+
+- Do NOT add `Co-Authored-By` trailers to commits
 
 ## File Organization
 

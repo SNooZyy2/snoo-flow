@@ -38,7 +38,7 @@ async function initializeEmbeddings(): Promise<void> {
 
   if (isNpxEnv && !process.env.FORCE_TRANSFORMERS) {
     console.log('[Embeddings] NPX environment detected - using hash-based embeddings');
-    console.log('[Embeddings] For semantic search, install globally: npm install -g claude-flow');
+    console.log('[Embeddings] For semantic search, install globally: npm install -g snoo-flow');
     return;
   }
 
