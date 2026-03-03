@@ -5,4 +5,4 @@ dist/
 .env
 .env.*
 *.tsbuildinfo
-.claude/
+.claude/settings.local.json

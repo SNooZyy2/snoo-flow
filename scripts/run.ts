@@ -10,6 +10,7 @@
 
 import { bootstrap } from '../src/bootstrap.js';
 import { handlePreTask, handlePostTask } from '../src/hooks/handler.js';
+import { consolidate } from '../src/reasoningbank/core/consolidate.js';
 import * as db from '../src/reasoningbank/db/queries.js';
 
 // Suppress internal logs — only show results
@@ -73,6 +74,10 @@ async function main() {
     output(`Patterns: ${patterns.length}`);
     output(`Trajectories: ${trajCount}`);
 
+  } else if (cmd === 'consolidate') {
+    const result = await consolidate();
+    output(`Consolidation complete: ${result.duplicatesFound} dupes, ${result.contradictionsFound} contradictions, ${result.itemsPruned} pruned (${result.itemsProcessed} processed in ${result.durationMs}ms)`);
+
   } else {
     quiet = false;
     console.log(`snoo-flow — learning loop runner
@@ -80,6 +85,7 @@ async function main() {
 Commands:
   pre  "task description"              Retrieve prior patterns before starting work
   post "task description" [exit-code]  Record what happened (0=success, 1=failure)
+  consolidate                          Run memory consolidation (dedup, prune)
   stats                                Show memory stats`);
   }
 }

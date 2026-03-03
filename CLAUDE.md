@@ -63,14 +63,9 @@ pre-task → AI works → post-task → judge → distill → consolidate
 - Typecheck fixes for CI: fixed `post-task.ts`/`pre-task.ts` wrong import paths, added `.d.ts` for `mmr.js`/`pii-scrubber.js`, added `@ts-expect-error` for optional dynamic imports, annotated implicit `any` params
 - All 21 tests pass: Phase 1 (5), Phase 2 (5), Phase 3 (6), Phase 4 (5)
 
-## Spec Documents
+## Spec Documents (Archived)
 
-All specs are symlinked at `docs/spec/` (read-only, lives in ruvnet-research):
-- `SPEC.md` — Problem, 9 fixes, phases, risks
-- `FILES.md` — File inventory, what to copy, what NOT to copy
-- `FIXES.md` — Exact before/after code snippets with line numbers
-
-**Read these before implementing.** They are the source of truth.
+v0.1 specs have been archived to `docs/spec/_archive/` — all phases complete.
 
 ## Source Repos (read-only reference)
 
@@ -109,7 +104,7 @@ src/
 tests/               # All test files here
 scripts/             # research-query.js + utility scripts
 docs/
-  spec/              # → symlink to ruvnet-research spec docs
+  spec/_archive/     # Archived v0.1 spec docs (SPEC, FILES, FIXES, etc.)
 .research.db         # → symlink to ruvnet-research/db/research.db (read-only)
 .swarm/memory.db     # Learning loop DB (created by bootstrap)
 ```
