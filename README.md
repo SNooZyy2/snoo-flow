@@ -1,12 +1,39 @@
-# snoo-flow
-
-A self-learning memory system for Claude Code. Every prompt retrieves relevant past experience; every tool use records what happened; every session consolidates knowledge. Over time, Claude gets better at tasks it has seen before.
+<div align="center">
 
 ```
-prompt → retrieve memories → Claude works → record outcome → judge → distill → store
-  ^                                                                                |
-  +-------------------------------- next prompt ←----------------------------------+
+ ███████╗███╗   ██╗ ██████╗  ██████╗       ███████╗██╗      ██████╗ ██╗    ██╗
+ ██╔════╝████╗  ██║██╔═══██╗██╔═══██╗      ██╔════╝██║     ██╔═══██╗██║    ██║
+ ███████╗██╔██╗ ██║██║   ██║██║   ██║█████╗█████╗  ██║     ██║   ██║██║ █╗ ██║
+ ╚════██║██║╚██╗██║██║   ██║██║   ██║╚════╝██╔══╝  ██║     ██║   ██║██║███╗██║
+ ███████║██║ ╚████║╚██████╔╝╚██████╔╝      ██║     ███████╗╚██████╔╝╚███╔███╔╝
+ ╚══════╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝       ╚═╝     ╚══════╝ ╚═════╝  ╚══╝╚══╝
 ```
+
+### Self-Learning Memory for Claude Code
+
+**Claude remembers what worked. And what didn't.**
+
+Every prompt retrieves relevant past experience. Every tool use records what happened.
+Every session consolidates knowledge. Over time, Claude gets better at tasks it has seen before.
+
+```
+  ┌──────────┐     ┌──────────────────┐     ┌──────────────┐     ┌───────┐
+  │  Prompt  │────▶│ Retrieve Memories │────▶│ Claude Works │────▶│ Judge │
+  └──────────┘     └──────────────────┘     └──────────────┘     └───┬───┘
+       ▲                                                              │
+       │            ┌──────────┐     ┌──────────┐     ┌──────────┐   │
+       └────────────│  Store   │◀────│  Scrub   │◀────│ Distill  │◀──┘
+                    └──────────┘     └──────────┘     └──────────┘
+```
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org)
+[![SQLite](https://img.shields.io/badge/Storage-SQLite-003B57.svg)](https://sqlite.org)
+[![ONNX Runtime](https://img.shields.io/badge/Embeddings-ONNX-purple.svg)](https://onnxruntime.ai)
+
+</div>
+
+---
 
 ## How It Works
 
