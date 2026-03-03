@@ -1,7 +1,10 @@
 node_modules/
 dist/
-.swarm/
+
 *.db
+.swarm/embed.sock
+.swarm/embed.pid
+.swarm/embed-server.log*
 .env
 .env.*
 *.tsbuildinfo

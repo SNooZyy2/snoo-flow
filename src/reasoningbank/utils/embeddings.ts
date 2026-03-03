@@ -1,8 +1,14 @@
 /**
  * Embedding generation for semantic similarity
  * Uses local transformers.js - no API key required!
+ *
+ * ADR-001: Tries persistent embed-server first (~3-5ms),
+ * falls back to in-process model load (~255ms cold).
  */
 
+import http from 'node:http';
+import { join } from 'node:path';
+import { unlinkSync } from 'node:fs';
 import { pipeline, env } from '@xenova/transformers';
 import { loadConfig } from './config.js';
 
@@ -66,12 +72,61 @@ async function initializeEmbeddings(): Promise<void> {
 }
 
 /**
- * Compute embedding for text using local model
+ * ADR-001: Try the persistent embed-server via Unix socket.
+ * Returns null on any failure (server down, stale socket, timeout).
+ */
+async function computeEmbeddingViaServer(text: string): Promise<Float32Array | null> {
+  const socketPath = join(process.cwd(), '.swarm/embed.sock');
+
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ text });
+    const req = http.request(
+      {
+        socketPath,
+        path: '/embed',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 2000,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const { vector } = JSON.parse(data);
+            resolve(new Float32Array(vector));
+          } catch {
+            resolve(null);
+          }
+        });
+      }
+    );
+    req.on('timeout', () => req.destroy());
+    req.on('error', (err: NodeJS.ErrnoException) => {
+      // ECONNREFUSED = stale socket (crashed server), ENOENT = no socket file.
+      // Both are fast (~10ms / ~0ms) — no timeout wait.
+      if (err.code === 'ECONNREFUSED') {
+        try { unlinkSync(socketPath); } catch { /* ok */ }
+      }
+      resolve(null);
+    });
+    req.end(body);
+  });
+}
+
+/**
+ * Compute embedding for text.
+ * 1. Check in-memory cache
+ * 2. Try persistent server (fast path: ~3-5ms)
+ * 3. Fall back to in-process model load (slow path: ~255ms)
  */
 export async function computeEmbedding(text: string): Promise<Float32Array> {
   const config = loadConfig();
 
-  // Check cache
+  // 1. Check in-memory cache
   const cacheKey = `local:${text}`;
   if (embeddingCache.has(cacheKey)) {
     return embeddingCache.get(cacheKey)!;
@@ -79,25 +134,29 @@ export async function computeEmbedding(text: string): Promise<Float32Array> {
 
   let embedding: Float32Array;
 
-  // Initialize if needed
-  await initializeEmbeddings();
-
-  if (embeddingPipeline) {
-    try {
-      // Use transformers.js for real embeddings
-      const output = await embeddingPipeline(text, {
-        pooling: 'mean',
-        normalize: true
-      });
-      embedding = new Float32Array(output.data);
-    } catch (error: any) {
-      console.error('[Embeddings] Generation failed:', error?.message || error);
-      embedding = hashEmbed(text, 384); // Fallback
-    }
+  // 2. Try persistent server (ADR-001)
+  const serverResult = await computeEmbeddingViaServer(text);
+  if (serverResult) {
+    embedding = serverResult;
   } else {
-    // Fallback to hash-based embeddings
-    const dims = config?.embeddings?.dimensions || 384;
-    embedding = hashEmbed(text, dims);
+    // 3. Fall back to in-process model load
+    await initializeEmbeddings();
+
+    if (embeddingPipeline) {
+      try {
+        const output = await embeddingPipeline(text, {
+          pooling: 'mean',
+          normalize: true
+        });
+        embedding = new Float32Array(output.data);
+      } catch (error: any) {
+        console.error('[Embeddings] Generation failed:', error?.message || error);
+        embedding = hashEmbed(text, 384);
+      }
+    } else {
+      const dims = config?.embeddings?.dimensions || 384;
+      embedding = hashEmbed(text, dims);
+    }
   }
 
   // MEMORY LEAK FIX: Clear existing timer if key exists

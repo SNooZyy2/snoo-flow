@@ -90,7 +90,11 @@ Commands:
   }
 }
 
-main().catch(err => {
+main().then(() => {
+  // Force exit — WASM threads from @xenova/transformers linger
+  // and prevent clean shutdown (causes zombie processes)
+  process.exit(0);
+}).catch(err => {
   console.error(err);
   process.exit(1);
 });
