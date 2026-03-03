@@ -1,11 +1,24 @@
 node_modules/
 dist/
 
+# Runtime state
+.swarm/
 *.db
-.swarm/embed.sock
-.swarm/embed.pid
-.swarm/embed-server.log*
+*.db-wal
+*.db-shm
+.research.db
+
+# Environment & secrets
 .env
 .env.*
+
+# Development context (plans, specs, ADRs)
+docs/MASTERPLAN.md
+docs/ADR/
+docs/spec
+
+# Build artifacts
 *.tsbuildinfo
+
+# Local settings
 .claude/settings.local.json
