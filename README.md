@@ -17,13 +17,13 @@ Every prompt retrieves relevant past experience. Every tool use records what hap
 Every session consolidates knowledge. Over time, Claude gets better at tasks it has seen before.
 
 ```
-  ┌──────────┐     ┌──────────────────┐     ┌──────────────┐     ┌───────┐
-  │  Prompt  │────>│ Retrieve Memories│────>│ Claude Works │────>│ Judge │
-  └──────────┘     └──────────────────┘     └──────────────┘     └───┬───┘
-       ▲                                                             │
-       │            ┌──────────┐     ┌──────────┐     ┌──────────┐   │
-       └────────────│  Store   │<────│  Scrub   │<─── │  Distill │<──┘
-                  └──────────┘     └──────────┘     └──────────┘
+  +----------+     +------------------+     +--------------+     +-------+
+  |  Prompt  |---->| Retrieve Memories|---->| Claude Works |---->| Judge |
+  +----------+     +------------------+     +--------------+     +---+---+
+       ^                                                             |
+       |            +----------+     +----------+     +----------+   |
+       +------------|  Store   |<----|  Scrub   |<----|  Distill |<--+
+                    +----------+     +----------+     +----------+
 ```
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
