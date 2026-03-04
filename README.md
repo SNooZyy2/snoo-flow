@@ -222,7 +222,7 @@ scripts/
 tests/                            # 31 tests across 6 suites
 .claude/
     hooks/
-      retrieve.sh                 # UserPromptSubmit → memory retrieval
+      retrieve.sh                 # UserPromptSubmit → memory retrieval + embed server auto-start
       record.sh                   # PostToolUse[Bash] → outcome recording
       record-tool.sh              # PostToolUse[Edit|Write|Agent] → recording
       consolidate.sh              # SessionEnd → memory consolidation
@@ -233,7 +233,10 @@ tests/                            # 31 tests across 6 suites
     embed.pid                     # Embed server PID file (runtime)
     embed-server.log              # Server logs (runtime)
 docs/
-    ADR/001-persistent-embedding-server.md   # Architecture decision record
+    ADR/
+      001-persistent-embedding-server.md     # Embed server design & rationale
+      002-aidefence-security-memory.md       # Security memory architecture
+      003-native-graph-transformer-integration.md  # Graph transformer integration
 ```
 
 ### Database Schema
