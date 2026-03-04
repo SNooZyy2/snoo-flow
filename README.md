@@ -22,7 +22,7 @@ Every session consolidates knowledge. Over time, Claude gets better at tasks it 
   └──────────┘     └──────────────────┘     └──────────────┘     └───┬───┘
        ▲                                                             │
        │            ┌──────────┐     ┌──────────┐     ┌──────────┐   │
-       └────────────│  Store   │<────│  Scrub   │<───│ Distill │<────┘
+       └────────────│  Store   │<────│  Scrub   │<─── │  Distill │<──┘
                     └──────────┘     └──────────┘     └──────────┘
 ```
 
