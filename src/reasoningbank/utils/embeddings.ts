@@ -9,13 +9,11 @@
 import http from 'node:http';
 import { join } from 'node:path';
 import { unlinkSync } from 'node:fs';
-import { pipeline, env } from '@xenova/transformers';
 import { loadConfig } from './config.js';
 
-// Configure transformers.js to use WASM backend only (avoid ONNX runtime issues)
-// The native ONNX runtime causes "DefaultLogger not registered" errors in Node.js
-env.backends.onnx.wasm.proxy = false; // Disable ONNX runtime proxy
-env.backends.onnx.wasm.numThreads = 1; // Single thread for stability
+// @xenova/transformers is imported DYNAMICALLY in initializeEmbeddings()
+// to avoid loading ~250MB of WASM binaries when the embed server handles requests.
+// This cuts hook latency from ~500ms to ~50ms on the happy path.
 
 let embeddingPipeline: any = null;
 let initializationPromise: Promise<void> | null = null;
@@ -54,6 +52,12 @@ async function initializeEmbeddings(): Promise<void> {
     console.log('[Embeddings] First run will download ~23MB model...');
 
     try {
+      // Dynamic import: only load WASM binaries when server fallback is needed
+      const { pipeline, env } = await import('@xenova/transformers');
+      // Configure WASM backend (must be set before pipeline creation)
+      env.backends.onnx.wasm.proxy = false;
+      env.backends.onnx.wasm.numThreads = 1;
+
       embeddingPipeline = await pipeline(
         'feature-extraction',
         'Xenova/all-MiniLM-L6-v2',
