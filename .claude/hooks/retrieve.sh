@@ -9,9 +9,20 @@ cd "$(dirname "$0")/../.."
 
 # ADR-001: Auto-start persistent embed server if not running
 SOCK=".swarm/embed.sock"
-if [ ! -S "$SOCK" ]; then
-  setsid tsx scripts/embed-server.ts >> .swarm/embed-server.log 2>&1 &
-  # Poll for readiness (socket appears after model load)
+PID_FILE=".swarm/embed.pid"
+
+# Check if server is actually alive (socket exists AND process is running)
+server_alive() {
+  [ -S "$SOCK" ] && [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null
+}
+
+if ! server_alive; then
+  # Clean up stale socket/pid from crashed server
+  rm -f "$SOCK" "$PID_FILE"
+  # Start server fully detached: nohup + setsid + /dev/null stdin
+  # (nohup ignores SIGHUP, setsid creates new session, /dev/null detaches stdin)
+  nohup setsid tsx scripts/embed-server.ts </dev/null >> .swarm/embed-server.log 2>&1 &
+  # Poll for readiness (socket appears after model load, ~400ms)
   for i in $(seq 1 20); do  # 20 x 100ms = 2s max wait
     [ -S "$SOCK" ] && break
     sleep 0.1

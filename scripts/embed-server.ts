@@ -264,9 +264,10 @@ function shutdown() {
   }, 3000).unref();
 }
 
-// Graceful shutdown on signals
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+// Graceful shutdown on SIGTERM/SIGINT, ignore SIGHUP (daemonized)
+process.on('SIGTERM', () => { log('Received SIGTERM'); shutdown(); });
+process.on('SIGINT', () => { log('Received SIGINT'); shutdown(); });
+process.on('SIGHUP', () => { log('Ignoring SIGHUP'); });
 
 // -------------------------------------------------------------------
 // Main
