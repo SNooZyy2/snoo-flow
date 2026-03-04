@@ -1,6 +1,9 @@
 #!/bin/bash
 # Post-task: record meaningful command outcomes for learning.
 # Shared by PostToolUse[Bash] and PostToolUseFailure[Bash].
+SNOO="$(cd "$(dirname "$0")/../.." && pwd)"
+TSX="$SNOO/node_modules/.bin/tsx"
+
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 [ -z "$COMMAND" ] && exit 0
@@ -21,7 +24,7 @@ EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // "PostToolUse"')
 
 # Truncate and record in background (don't block Claude)
 COMMAND="${COMMAND:0:500}"
-cd "$(dirname "$0")/../.."
-tsx scripts/run.ts post "$COMMAND" "$EXIT_CODE" >/dev/null 2>&1 &
+cd "$SNOO"
+"$TSX" "$SNOO/scripts/run.ts" post "$COMMAND" "$EXIT_CODE" >/dev/null 2>&1 &
 disown
 exit 0

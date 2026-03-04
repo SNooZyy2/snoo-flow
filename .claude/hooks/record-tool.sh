@@ -1,6 +1,9 @@
 #!/bin/bash
 # Post-task: record Edit/Write/Agent outcomes for learning.
 # Matched by PostToolUse and PostToolUseFailure for non-Bash tools.
+SNOO="$(cd "$(dirname "$0")/../.." && pwd)"
+TSX="$SNOO/node_modules/.bin/tsx"
+
 INPUT=$(cat)
 TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty')
 [ -z "$TOOL" ] && exit 0
@@ -32,7 +35,7 @@ esac
 
 # Truncate and record in background (don't block Claude)
 DESC="${DESC:0:500}"
-cd "$(dirname "$0")/../.."
-tsx scripts/run.ts post "$DESC" "$EXIT_CODE" >/dev/null 2>&1 &
+cd "$SNOO"
+"$TSX" "$SNOO/scripts/run.ts" post "$DESC" "$EXIT_CODE" >/dev/null 2>&1 &
 disown
 exit 0
