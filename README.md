@@ -23,7 +23,7 @@ Every session consolidates knowledge. Over time, Claude gets better at tasks it 
        ▲                                                             │
        │            ┌──────────┐     ┌──────────┐     ┌──────────┐   │
        └────────────│  Store   │<────│  Scrub   │<─── │  Distill │<──┘
-                    └──────────┘     └──────────┘     └──────────┘
+                  └──────────┘     └──────────┘     └──────────┘
 ```
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
