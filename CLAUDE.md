@@ -92,7 +92,7 @@ docs/
 - `embeddings.ts` ONLY — `embeddings.js` is hash-based and must not be added
 - Do NOT add `intelligence.ts` (O(n) facade claiming O(log n))
 - Do NOT add `types/index.ts` or `config/reasoningbank-types.ts` (dead files)
-- Do NOT add `router/router.ts` (use dynamic import with try/catch instead)
+- `src/router/router.ts` is the ModelRouter — dynamically imported by judge/distill via try/catch
 - ESM throughout: `"type": "module"` in package.json
 - `runMigrations()` inline DDL is canonical — ignore separate .sql migration files
 - Schema source of truth: `src/reasoningbank/db/queries.ts`
@@ -124,14 +124,28 @@ Algorithm parameters live in `src/reasoningbank/config/reasoningbank.yaml`:
 
 - **Retrieval weights:** similarity=0.65, recency=0.15, reliability=0.20
 - **Embeddings:** local provider, Xenova/all-MiniLM-L6-v2, 384 dimensions
-- **Consolidation:** dedup at 0.87 similarity, prune after 180 days idle
+- **Consolidation:** dedup at 0.87 similarity, prune after 180 days idle, prune at 5+ contradictions
+- **Judge/Distill model:** gemini-2.0-flash-lite via OpenRouter (EOL end of March 2026)
+
+## LLM Judge (Optional)
+
+Without an API key, judge and distill use local heuristics (exit code + template extraction).
+With an API key, they call an LLM for semantic judgment and structured distillation.
+
+To enable: create `.env.local` in the project root:
+```
+OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+The hooks source `.env.local` automatically. Supports `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY`.
+The router (`src/router/router.ts`) handles both APIs with native fetch, no extra dependencies.
 
 ## Security
 
 - NEVER hardcode API keys or credentials
-- NEVER commit .env files
-- Optional LLM judge requires API key via env var, not hardcoded
-- PII scrubber runs on all distilled memories before storage
+- NEVER commit .env files (`.env.*` is gitignored)
+- API keys go in `.env.local` only — hooks source it automatically
+- PII scrubber runs on all distilled memories before storage (Supabase keys, JWTs, Google keys, base64 secrets)
 
 ## Git
 

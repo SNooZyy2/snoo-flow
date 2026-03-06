@@ -89,6 +89,16 @@ npx tsx src/bootstrap.ts
 
 That's it. The hooks are pre-configured. Next time you open Claude Code in this directory, snoo-flow starts learning automatically.
 
+### Enable LLM Judge (Optional)
+
+For smarter outcome scoring, create `.env.local` in the project root:
+
+```bash
+echo 'OPENROUTER_API_KEY=sk-or-v1-...' > .env.local
+```
+
+Without this, snoo-flow still works — it just uses heuristic judgment (exit codes) and template-based distillation instead of LLM-powered analysis.
+
 ### Use It in Other Projects
 
 If you want snoo-flow's learning in a different project directory:
@@ -149,10 +159,11 @@ When you type a new prompt, snoo-flow searches for lessons that are relevant to 
 
 ## Privacy and Security
 
-- **Everything stays local.** Memories are stored in a SQLite file on your machine (`.swarm/memory.db`)
-- **PII is scrubbed.** Emails, API keys, and other sensitive data are automatically redacted before storage
-- **No external calls.** snoo-flow uses a local embedding model — your data never leaves your computer
-- **No API keys required.** The default setup works entirely offline. An optional LLM-as-judge feature is available if you want more nuanced outcome scoring (requires an API key)
+- **Memories stay local.** Stored in a SQLite file on your machine (`.swarm/memory.db`)
+- **PII is scrubbed.** Emails, API keys (Supabase, Google, GitHub, etc.), JWTs, and other sensitive data are automatically redacted before storage
+- **Embeddings are local.** Uses a 23MB on-device model — no external calls for search
+- **No API keys required by default.** The default setup works entirely offline with heuristic judgment and template-based distillation
+- **Optional LLM judge.** For smarter outcome scoring and distillation, add an API key to `.env.local` (supports OpenRouter or Anthropic). Only the judge and distill steps make external calls — embeddings and retrieval remain fully local
 
 ## Troubleshooting
 
