@@ -12,18 +12,27 @@ EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // "PostToolUse"')
 case "$TOOL" in
   Edit)
     FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // "unknown"')
-    OLD=$(echo "$INPUT" | jq -r '.tool_input.old_string // ""' | head -c 120)
-    NEW=$(echo "$INPUT" | jq -r '.tool_input.new_string // ""' | head -c 120)
-    DESC="Edit ${FILE##*/}: '${OLD}' → '${NEW}'"
+    OLD=$(echo "$INPUT" | jq -r '.tool_input.old_string // ""')
+    NEW=$(echo "$INPUT" | jq -r '.tool_input.new_string // ""')
+    OLD_LEN=${#OLD}
+    NEW_LEN=${#NEW}
+    # Skip trivial edits (< 30 chars changed) — too small to learn from
+    [ $OLD_LEN -lt 30 ] && [ $NEW_LEN -lt 30 ] && exit 0
+    # Include more context: file path + truncated change summary
+    OLD=$(echo "$OLD" | head -c 150)
+    NEW=$(echo "$NEW" | head -c 150)
+    DESC="Edit ${FILE}: '${OLD}' → '${NEW}'"
     ;;
   Write)
     FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // "unknown"')
     LEN=$(echo "$INPUT" | jq -r '.tool_input.content // ""' | wc -c)
-    DESC="Write ${FILE##*/} (${LEN} bytes)"
+    # Skip very small writes (< 100 bytes) — likely config tweaks, not learnable
+    [ "$LEN" -lt 100 ] && exit 0
+    DESC="Write ${FILE} (${LEN} bytes)"
     ;;
   Agent)
     AGENT_TYPE=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // "unknown"')
-    AGENT_DESC=$(echo "$INPUT" | jq -r '.tool_input.description // ""' | head -c 200)
+    AGENT_DESC=$(echo "$INPUT" | jq -r '.tool_input.description // ""' | head -c 300)
     DESC="Agent[${AGENT_TYPE}]: ${AGENT_DESC}"
     ;;
   *)
@@ -31,7 +40,7 @@ case "$TOOL" in
 esac
 
 # Truncate and record in background (don't block Claude)
-DESC="${DESC:0:500}"
+DESC="${DESC:0:800}"
 cd "$(dirname "$0")/../.."
 tsx scripts/run.ts post "$DESC" "$EXIT_CODE" >/dev/null 2>&1 &
 disown

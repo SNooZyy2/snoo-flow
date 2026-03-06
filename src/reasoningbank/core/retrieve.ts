@@ -58,22 +58,28 @@ export async function retrieveMemories(
   console.log(`[INFO] Found ${candidates.length} candidates`);
 
   // 3. Score each candidate with 4-factor model
-  const scored = candidates.map(item => {
-    const similarity = cosineSimilarity(queryEmbed, item.embedding);
-    const recency = Math.exp(-item.age_days / config.retrieve.recency_half_life_days);
-    const reliability = Math.min(item.confidence, 1.0);
+  // Floor: reject candidates with raw cosine similarity below threshold
+  // to prevent recency/reliability padding from surfacing irrelevant noise
+  const MIN_SIMILARITY = 0.25;
 
-    const baseScore =
-      config.retrieve.alpha * similarity +
-      config.retrieve.beta * recency +
-      config.retrieve.gamma * reliability;
+  const scored = candidates
+    .map(item => {
+      const similarity = cosineSimilarity(queryEmbed, item.embedding);
+      const recency = Math.exp(-item.age_days / config.retrieve.recency_half_life_days);
+      const reliability = Math.min(item.confidence, 1.0);
 
-    return {
-      ...item,
-      score: baseScore,
-      components: { similarity, recency, reliability }
-    };
-  });
+      const baseScore =
+        config.retrieve.alpha * similarity +
+        config.retrieve.beta * recency +
+        config.retrieve.gamma * reliability;
+
+      return {
+        ...item,
+        score: baseScore,
+        components: { similarity, recency, reliability }
+      };
+    })
+    .filter(item => item.components.similarity >= MIN_SIMILARITY);
 
   // 4. MMR selection for diversity
   const selected = mmrSelection(scored, queryEmbed, k, config.retrieve.delta);
