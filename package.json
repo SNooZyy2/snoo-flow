@@ -11,7 +11,8 @@
     "snoo": "tsx scripts/run.ts",
     "embed-server:start": "setsid tsx scripts/embed-server.ts >> .swarm/embed-server.log 2>&1 &",
     "embed-server:stop": "if [ -f .swarm/embed.pid ]; then kill \"$(cat .swarm/embed.pid)\" 2>/dev/null; rm -f .swarm/embed.pid; fi; rm -f .swarm/embed.sock",
-    "postinstall": "npm run embed-server:stop 2>/dev/null || true"
+    "postinstall": "npm run embed-server:stop 2>/dev/null || true",
+    "prepare": "ln -sf ../../scripts/pre-commit-hooks-check.sh .git/hooks/pre-commit 2>/dev/null || true"
   },
   "dependencies": {
     "@xenova/transformers": "^2.17.2",
