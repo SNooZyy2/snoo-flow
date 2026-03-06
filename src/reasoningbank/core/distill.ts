@@ -12,7 +12,6 @@ import { scrubMemory } from '../utils/pii-scrubber.js';
 import { computeEmbedding } from '../utils/embeddings.js';
 let ModelRouter: any = null;
 try {
-    // @ts-expect-error — router.js is optional; try/catch handles absence
     ({ ModelRouter } = await import('../../router/router.js'));
 } catch {
     // ModelRouter unavailable -- template-based distillation will be used
