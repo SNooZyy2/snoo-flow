@@ -108,6 +108,19 @@ export async function runMigrations(): Promise<void> {
       timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS retrieval_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      prompt TEXT NOT NULL,
+      memories_returned INTEGER NOT NULL,
+      memories_considered INTEGER NOT NULL,
+      top_score REAL,
+      top_similarity REAL,
+      results_json TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_retrieval_log_created ON retrieval_log(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_patterns_type ON patterns(type);
     CREATE INDEX IF NOT EXISTS idx_patterns_confidence ON patterns(confidence DESC);
     CREATE INDEX IF NOT EXISTS idx_patterns_created_at ON patterns(created_at DESC);
@@ -447,6 +460,59 @@ export function pruneOldMemories(options: {
   `).run(options.minConfidence, options.maxAgeDays);
 
   return result.changes;
+}
+
+/**
+ * Log a retrieval event for observability
+ */
+export function logRetrieval(entry: {
+  prompt: string;
+  memoriesReturned: number;
+  memoriesConsidered: number;
+  results: Array<{ id: string; title: string; score: number; similarity: number }>;
+  durationMs: number;
+}): void {
+  try {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO retrieval_log
+        (prompt, memories_returned, memories_considered, top_score, top_similarity, results_json, duration_ms)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      entry.prompt.substring(0, 500),
+      entry.memoriesReturned,
+      entry.memoriesConsidered,
+      entry.results[0]?.score ?? null,
+      entry.results[0]?.similarity ?? null,
+      JSON.stringify(entry.results),
+      entry.durationMs
+    );
+  } catch {
+    // Non-critical — don't break retrieval if logging fails
+  }
+}
+
+/**
+ * Fetch recent retrieval log entries
+ */
+export function getRetrievalLog(limit = 20): Array<{
+  prompt: string;
+  memories_returned: number;
+  memories_considered: number;
+  top_score: number | null;
+  top_similarity: number | null;
+  results_json: string;
+  duration_ms: number;
+  created_at: string;
+}> {
+  const db = getDb();
+  return db.prepare(`
+    SELECT prompt, memories_returned, memories_considered,
+           top_score, top_similarity, results_json, duration_ms, created_at
+    FROM retrieval_log
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(limit) as any[];
 }
 
 /**

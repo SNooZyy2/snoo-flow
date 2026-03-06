@@ -93,7 +93,7 @@ export async function retrieveMemories(
   console.log(`[INFO] Retrieval complete: ${selected.length} memories in ${duration}ms`);
   db.logMetric('rb.retrieve.latency_ms', duration);
 
-  return selected.map((item: any) => ({
+  const results = selected.map((item: any) => ({
     id: item.id,
     title: item.pattern_data.title,
     description: item.pattern_data.description,
@@ -101,6 +101,22 @@ export async function retrieveMemories(
     score: item.score,
     components: item.components
   }));
+
+  // 6. Log retrieval for observability
+  db.logRetrieval({
+    prompt: query,
+    memoriesReturned: results.length,
+    memoriesConsidered: candidates.length,
+    results: results.map(r => ({
+      id: r.id,
+      title: r.title,
+      score: r.score,
+      similarity: r.components.similarity,
+    })),
+    durationMs: duration,
+  });
+
+  return results;
 }
 
 /**

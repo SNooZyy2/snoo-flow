@@ -152,6 +152,33 @@ describe('Phase 4: End-to-End Learning Loop', () => {
     testDb.close();
   });
 
+  it('retrieval_log captures retrieval events', async () => {
+    const testDb = new Database(testDbPath, { readonly: true });
+
+    const rows = testDb.prepare(
+      `SELECT * FROM retrieval_log ORDER BY created_at DESC`
+    ).all();
+
+    assert.ok(rows.length > 0, `retrieval_log should have entries, got ${rows.length}`);
+
+    const entry = rows[0];
+    assert.ok(entry.prompt.length > 0, 'prompt should not be empty');
+    assert.ok(entry.memories_returned > 0, 'should have returned memories');
+    assert.ok(entry.memories_considered > 0, 'should have considered candidates');
+    assert.ok(entry.duration_ms >= 0, 'duration should be non-negative');
+    assert.ok(entry.top_score > 0, 'top_score should be positive');
+    assert.ok(entry.top_similarity > 0, 'top_similarity should be positive');
+
+    const results = JSON.parse(entry.results_json);
+    assert.ok(Array.isArray(results), 'results_json should parse to array');
+    assert.ok(results[0].id, 'result should have id');
+    assert.ok(results[0].title, 'result should have title');
+    assert.ok(typeof results[0].score === 'number', 'result should have numeric score');
+    assert.ok(typeof results[0].similarity === 'number', 'result should have numeric similarity');
+
+    testDb.close();
+  });
+
   it('all patterns have embeddings', async () => {
     const testDb = new Database(testDbPath, { readonly: true });
 
