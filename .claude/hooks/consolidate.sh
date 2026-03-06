@@ -1,6 +1,7 @@
 #!/bin/bash
 # Session end: consolidate accumulated memories (dedup, prune, detect contradictions).
 SNOO="$(cd "$(dirname "$0")/../.." && pwd)"
+[ -f "$SNOO/.env.local" ] && set -a && . "$SNOO/.env.local" && set +a
 TSX="$SNOO/node_modules/.bin/tsx"
 
 cd "$SNOO"

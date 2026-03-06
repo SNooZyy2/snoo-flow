@@ -2,6 +2,7 @@
 # Pre-task: retrieve learned patterns relevant to the user's prompt.
 # Stdout is injected into Claude's context via UserPromptSubmit hook.
 SNOO="$(cd "$(dirname "$0")/../.." && pwd)"
+[ -f "$SNOO/.env.local" ] && set -a && . "$SNOO/.env.local" && set +a
 TSX="$SNOO/node_modules/.bin/tsx"
 
 INPUT=$(cat)
