@@ -463,6 +463,38 @@ export function pruneOldMemories(options: {
 }
 
 /**
+ * Get contradiction counts per memory ID
+ * Returns a Map of memoryId → number of contradictions
+ */
+export function getContradictionCounts(): Map<string, number> {
+  const db = getDb();
+
+  const rows = db.prepare(`
+    SELECT src_id, COUNT(*) as cnt
+    FROM pattern_links
+    WHERE relation = 'contradicts'
+    GROUP BY src_id
+    HAVING cnt > 0
+  `).all() as Array<{ src_id: string; cnt: number }>;
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    counts.set(row.src_id, row.cnt);
+  }
+  return counts;
+}
+
+/**
+ * Delete a memory and its associated embedding
+ */
+export function deleteMemory(memoryId: string): void {
+  const db = getDb();
+  db.prepare(`DELETE FROM pattern_embeddings WHERE id = ?`).run(memoryId);
+  db.prepare(`DELETE FROM pattern_links WHERE src_id = ? OR dst_id = ?`).run(memoryId, memoryId);
+  db.prepare(`DELETE FROM patterns WHERE id = ?`).run(memoryId);
+}
+
+/**
  * Log a retrieval event for observability
  */
 export function logRetrieval(entry: {
