@@ -28,7 +28,7 @@ describe('PII Scrubber', () => {
   });
 
   it('redacts Google API keys (AIza...)', () => {
-    const text = 'export GOOGLE_API_KEY=AIzaSyA1234567890abcdefghijklmnopqrstuv';
+    const text = 'export GOOGLE_API_KEY=' + 'AIza' + 'SyA1234567890abcdefghijklmnopqrstuv';
     const scrubbed = scrubPII(text);
     assert.ok(!scrubbed.includes('AIzaSy'), `Should redact Google key, got: ${scrubbed}`);
     assert.ok(scrubbed.includes('[GOOGLE_API_KEY]'), 'Should use Google placeholder');
@@ -69,7 +69,7 @@ describe('PII Scrubber', () => {
     const memory = {
       title: 'Used key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3BxcnN0IiwidHlwZSI6ImFub24ifQ.abcdefghijklmnopqrstuvwxyz123456',
       description: 'Connected to https://abcdefghijklmnopqrstu.supabase.co',
-      content: 'Set GOOGLE_API_KEY=AIzaSyA1234567890abcdefghijklmnopqrstuv',
+      content: 'Set GOOGLE_API_KEY=' + 'AIza' + 'SyA1234567890abcdefghijklmnopqrstuv',
       tags: ['auth'],
     };
     const scrubbed = scrubMemory(memory);
