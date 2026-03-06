@@ -6,7 +6,7 @@
  ███████╗██╔██╗ ██║██║   ██║██║   ██║█████╗█████╗  ██║     ██║   ██║██║ █╗ ██║
  ╚════██║██║╚██╗██║██║   ██║██║   ██║╚════╝██╔══╝  ██║     ██║   ██║██║███╗██║
  ███████║██║ ╚████║╚██████╔╝╚██████╔╝      ██║     ███████╗╚██████╔╝╚███╔███╔╝
- ╚══════╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝       ╚═╝     ╚══════╝ ╚═════╝  ╚══╝╚══╝
+ ╚══════╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝       ╚═╝     ╚══════╝  ╚═════╝  ╚══╝╚══╝
 ```
 
 ### Self-Learning Memory for Claude Code
@@ -89,16 +89,6 @@ npx tsx src/bootstrap.ts
 
 That's it. The hooks are pre-configured. Next time you open Claude Code in this directory, snoo-flow starts learning automatically.
 
-### Enable LLM Judge (Optional)
-
-For smarter outcome scoring, create `.env.local` in the project root:
-
-```bash
-echo 'OPENROUTER_API_KEY=sk-or-v1-...' > .env.local
-```
-
-Without this, snoo-flow still works — it just uses heuristic judgment (exit codes) and template-based distillation instead of LLM-powered analysis.
-
 ### Use It in Other Projects
 
 If you want snoo-flow's learning in a different project directory:
@@ -156,6 +146,59 @@ snoo-flow runs a six-stage pipeline on every tool use:
 6. **Store** — Saves it locally in a SQLite database on your machine
 
 When you type a new prompt, snoo-flow searches for lessons that are relevant to what you're about to do, scoring them on how similar they are, how recent they are, and how reliable they've been. Claude sees the best matches before it responds.
+
+## What Works Locally vs. With an API Key
+
+snoo-flow is designed to work entirely offline out of the box. Adding an API key unlocks smarter analysis, but everything still functions without one.
+
+### Fully Local (no API key needed)
+
+| Component | How it works |
+|---|---|
+| **Embeddings** | A persistent ONNX server runs a 23MB on-device model (`all-MiniLM-L6-v2`). All semantic search stays on your machine — nothing leaves localhost. ~85x faster than cold-loading per hook. |
+| **Judge (heuristic)** | Decides success/failure by inspecting exit codes, error keywords, and signal counts. Fast and free, but can't understand *why* something failed. |
+| **Distiller (template)** | Extracts "when X, do Y because Z" patterns using regex and structured templates. Filters out trivial tasks (status checks, mechanical git commands) to avoid noise. |
+| **Storage & retrieval** | SQLite + cosine similarity + MMR diversity. Fully local. |
+| **PII scrubber** | Regex-based redaction of API keys, JWTs, emails, and secrets before storage. Runs on every distilled memory. |
+
+### With an LLM Judge (optional, requires API key)
+
+| Component | How it works |
+|---|---|
+| **Judge (LLM)** | Sends the task trajectory to an LLM that evaluates *semantic* success — not just "did it exit 0" but "did it actually solve the problem?" Returns a structured verdict with confidence and reasons. |
+| **Distiller (LLM)** | An LLM reads the full trajectory and extracts richer, more nuanced patterns. Can identify subtle lessons that template extraction would miss. |
+
+**What stays local even with an API key:** embeddings, retrieval, storage, PII scrubbing, and consolidation. Only the judge and distill steps make external calls.
+
+### Setting Up the LLM Judge
+
+1. Get an API key from [OpenRouter](https://openrouter.ai/) (recommended) or use an existing Anthropic key.
+
+2. Create `.env.local` in the project root:
+
+   ```bash
+   # OpenRouter (recommended — uses gemini-2.0-flash-lite, very cheap)
+   echo 'OPENROUTER_API_KEY=sk-or-v1-...' > .env.local
+
+   # OR use Anthropic directly
+   echo 'ANTHROPIC_API_KEY=sk-ant-...' > .env.local
+   ```
+
+3. That's it. The hooks source `.env.local` automatically. Next time Claude runs a tool, the judge and distiller will use the LLM instead of heuristics.
+
+You can verify it's working by checking the logs after a few tool uses:
+
+```bash
+npx tsx scripts/run.ts log
+```
+
+LLM-judged entries will show higher confidence scores (0.7–0.95) compared to heuristic ones (always 0.5).
+
+### Which Should You Use?
+
+- **Start without an API key.** The local pipeline is genuinely useful and costs nothing. Memories build up, retrieval works, and Claude gets better over time.
+- **Add an API key when you want higher-quality memories.** The LLM judge catches nuanced failures that exit codes miss (e.g., a command succeeds but produces wrong output). The LLM distiller writes more specific, actionable lessons.
+- **Cost is negligible.** The default model (gemini-2.0-flash-lite via OpenRouter) costs fractions of a cent per judgment. A heavy day of coding might cost $0.01–0.05 in judge/distill calls.
 
 ## Privacy and Security
 
