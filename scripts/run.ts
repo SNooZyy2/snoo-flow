@@ -74,6 +74,23 @@ async function main() {
     output(`Patterns: ${patterns.length}`);
     output(`Trajectories: ${trajCount}`);
 
+  } else if (cmd === 'log') {
+    const limit = parseInt(rest[0], 10) || 20;
+    const entries = db.getRetrievalLog(limit);
+    if (entries.length === 0) {
+      output('No retrieval log entries yet.');
+    } else {
+      for (const e of entries) {
+        const results = JSON.parse(e.results_json);
+        output(`[${e.created_at}] ${e.duration_ms}ms | ${e.memories_returned}/${e.memories_considered} memories`);
+        output(`  Prompt: ${e.prompt.substring(0, 80)}${e.prompt.length > 80 ? '...' : ''}`);
+        for (const r of results) {
+          output(`    - "${r.title}" score=${r.score.toFixed(3)} sim=${r.similarity.toFixed(3)}`);
+        }
+        output('');
+      }
+    }
+
   } else if (cmd === 'consolidate') {
     const result = await consolidate();
     output(`Consolidation complete: ${result.duplicatesFound} dupes, ${result.contradictionsFound} contradictions, ${result.itemsPruned} pruned (${result.itemsProcessed} processed in ${result.durationMs}ms)`);
@@ -85,6 +102,7 @@ async function main() {
 Commands:
   pre  "task description"              Retrieve prior patterns before starting work
   post "task description" [exit-code]  Record what happened (0=success, 1=failure)
+  log  [limit]                         Show recent retrieval log (default: 20)
   consolidate                          Run memory consolidation (dedup, prune)
   stats                                Show memory stats`);
   }
