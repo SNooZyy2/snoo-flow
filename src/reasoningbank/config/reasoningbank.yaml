@@ -32,7 +32,8 @@ reasoningbank:
   # Judge Configuration (Algorithm 2)
   # ============================================================================
   judge:
-    model: "claude-sonnet-4-6-20250514"
+    # DEPRECATION: gemini-2.0-flash-lite EOL end of March 2026 — replace with successor
+    model: "gemini-2.0-flash-lite"
     temperature: 0                 # deterministic evaluation
     max_tokens: 512
     timeout_ms: 10000

@@ -14,6 +14,7 @@ const OPENROUTER_MODEL_MAP: Record<string, string> = {
   'claude-3-5-haiku-20241022': 'anthropic/claude-3.5-haiku-20241022',
   'claude-opus-4-1-20250514': 'anthropic/claude-opus-4.1',
   'gemini-2.0-flash': 'google/gemini-2.0-flash-001',
+  'gemini-2.0-flash-lite': 'google/gemini-2.0-flash-lite-001', // EOL end of March 2026
   'gemini-2.5-flash': 'google/gemini-2.5-flash-preview',
 };
 
