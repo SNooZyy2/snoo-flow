@@ -9,7 +9,6 @@ import { fileURLToPath } from 'url';
 import { loadConfig } from '../utils/config.js';
 let ModelRouter: any = null;
 try {
-    // @ts-expect-error — router.js is optional; try/catch handles absence
     ({ ModelRouter } = await import('../../router/router.js'));
 } catch {
     // ModelRouter unavailable -- heuristic fallback will be used

@@ -11,11 +11,23 @@ const DEFAULT_PATTERNS = [
     { pattern: /\b\d{3}-\d{2}-\d{4}\b/g, replacement: '[SSN]' },
     { pattern: /\b\d{9}\b/g, replacement: '[SSN]' },
     // API Keys (common patterns)
-    { pattern: /\bsk-[a-zA-Z0-9]{48}\b/g, replacement: '[API_KEY]' }, // Anthropic
-    { pattern: /\bghp_[a-zA-Z0-9]{36}\b/g, replacement: '[API_KEY]' }, // GitHub
+    { pattern: /\bsk-[a-zA-Z0-9]{20,}\b/g, replacement: '[API_KEY]' }, // Anthropic/OpenAI (relaxed length)
+    { pattern: /\bsk-ant-[a-zA-Z0-9_-]+\b/g, replacement: '[API_KEY]' }, // Anthropic new format
+    { pattern: /\bghp_[a-zA-Z0-9]{36}\b/g, replacement: '[API_KEY]' }, // GitHub PAT
     { pattern: /\bgho_[a-zA-Z0-9]{36}\b/g, replacement: '[API_KEY]' }, // GitHub OAuth
+    { pattern: /\bghs_[a-zA-Z0-9]{36}\b/g, replacement: '[API_KEY]' }, // GitHub App
     { pattern: /\bxoxb-[a-zA-Z0-9\-]+\b/g, replacement: '[API_KEY]' }, // Slack
     { pattern: /\bAKIA[0-9A-Z]{16}\b/g, replacement: '[AWS_KEY]' }, // AWS
+    // JWT tokens (must run BEFORE generic base64 to match full 3-part structure)
+    // Catches Supabase anon/service_role keys, auth tokens, etc.
+    { pattern: /\beyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\b/g, replacement: '[JWT]' },
+    // Supabase URL patterns (project ref in URL)
+    { pattern: /(https?:\/\/)[a-z]{20,}\.supabase\.co/g, replacement: '$1[SUPABASE_PROJECT].supabase.co' },
+    // Google API keys
+    { pattern: /\bAIza[a-zA-Z0-9_-]{35}\b/g, replacement: '[GOOGLE_API_KEY]' },
+    // Generic long base64 secrets (40+ chars, likely keys/tokens)
+    // Runs AFTER JWT/specific patterns to avoid partial matches
+    { pattern: /\b[A-Za-z0-9+/]{40,}={0,2}\b/g, replacement: '[SECRET]' },
     // Credit card numbers (basic pattern)
     { pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, replacement: '[CREDIT_CARD]' },
     // Phone numbers (US format)
@@ -24,9 +36,7 @@ const DEFAULT_PATTERNS = [
     // IP addresses
     { pattern: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, replacement: '[IP]' },
     // URLs with tokens/keys in query params
-    { pattern: /([?&])(token|key|apikey|api_key|secret)=[^&\s]+/gi, replacement: '$1$2=[REDACTED]' },
-    // JWT tokens
-    { pattern: /\beyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\b/g, replacement: '[JWT]' }
+    { pattern: /([?&])(token|key|apikey|api_key|secret|password|service_role)=[^&\s]+/gi, replacement: '$1$2=[REDACTED]' },
 ];
 /**
  * Scrub PII from text

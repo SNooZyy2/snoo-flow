@@ -12,7 +12,6 @@ import { scrubMemory } from '../utils/pii-scrubber.js';
 import { computeEmbedding } from '../utils/embeddings.js';
 let ModelRouter: any = null;
 try {
-    // @ts-expect-error — router.js is optional; try/catch handles absence
     ({ ModelRouter } = await import('../../router/router.js'));
 } catch {
     // ModelRouter unavailable -- template-based distillation will be used
@@ -213,8 +212,8 @@ async function storeMemories(
  * Template-based distillation (fallback when no LLM API key)
  *
  * Extracts structured "when X, do Y because Z" patterns from the task
- * description and trajectory. Rejects trivial/uninformative tasks that
- * would just pollute the memory with command-log noise.
+ * description and trajectory. Rejects trivial/uninformative tasks and
+ * mechanical commands that would pollute memory with noise.
  */
 async function templateBasedDistill(
   trajectory: Trajectory,
@@ -230,14 +229,22 @@ async function templateBasedDistill(
     return [];
   }
 
-  const memory = extractPattern(query, trajectory, verdict);
-  if (!memory) {
-    console.log('[INFO] Could not extract meaningful pattern');
+  const steps = trajectory.steps || [];
+
+  // Gate: reject trajectories with only mechanical steps (no real work)
+  if (steps.length > 0 && steps.every(s => isMechanicalStep(s))) {
+    console.log('[INFO] Skipping distillation — all steps are mechanical');
+    return [];
+  }
+
+  const memories = extractPatterns(query, trajectory, verdict);
+  if (memories.length === 0) {
+    console.log('[INFO] Could not extract meaningful patterns');
     return [];
   }
 
   const confidencePrior = verdict.label === 'Success' ? 0.6 : 0.3;
-  return storeMemories([memory], confidencePrior, verdict, options);
+  return storeMemories(memories, confidencePrior, verdict, options);
 }
 
 /**
@@ -245,16 +252,22 @@ async function templateBasedDistill(
  * - Very short queries (< 15 chars)
  * - Pure status checks, reads, or navigation
  * - Our own learning pipeline commands
+ * - Mechanical git/CI commands
  */
 function isTrivialTask(query: string): boolean {
   if (query.length < 15) return true;
 
   const trivialPatterns = [
     /^(ls|cat|head|tail|echo|pwd|which|wc|tree|file|stat|mkdir)\b/,
-    /^git\s+(status|diff|log|branch|remote|show)\b/,
+    /^git\s+(status|diff|log|branch|remote|show|stash)\b/,
+    /^git\s+(add|commit|push|pull|fetch|checkout|switch)\b/,
+    /^git\s+tag\b/,
+    /^gh\s+(pr\s+create|pr\s+merge|pr\s+view|issue)\b/,
     /^(npm run snoo|tsx scripts\/run)/,
     /^(curl|wget)\s.*\/(health|status|ping)\b/,
     /^(cd|pushd|popd)\s/,
+    /^docker\s+exec\s.*psql\b/,  // verbatim docker psql — too mechanical
+    /^(npm|yarn|pnpm|bun)\s+(install|ci|add|remove)\b/,  // package installs
     /^Write\s\S+\s\(\d+\sbytes\)$/,  // "Write foo.ts (200 bytes)" — no context
     /^Edit\s\S+:\s'.{0,10}'\s→\s'.{0,10}'$/,  // very short edits — no context
   ];
@@ -263,55 +276,190 @@ function isTrivialTask(query: string): boolean {
 }
 
 /**
- * Extract a structured pattern from a task.
- * Returns null if the task doesn't contain enough signal.
+ * Check if an individual trajectory step is mechanical (not worth learning from)
  */
-function extractPattern(
+function isMechanicalStep(step: any): boolean {
+  const cmd = step.command || step.action || '';
+  const mechanicalPatterns = [
+    /^git\s+(add|commit|push|pull|fetch|tag|stash)/,
+    /^gh\s+(pr|issue)\s+(create|merge|close|view)/,
+    /^(npm|yarn|pnpm|bun)\s+(install|ci)\b/,
+    /^(mkdir|chmod|chown|mv|cp)\s/,
+    /^docker\s+(start|stop|rm|pull)\b/,
+  ];
+  return mechanicalPatterns.some(p => p.test(cmd));
+}
+
+/**
+ * Extract structured patterns from a task.
+ * May return multiple patterns from a single trajectory when there are
+ * distinct insights (e.g., an error message AND its resolution).
+ */
+function extractPatterns(
   query: string,
   trajectory: Trajectory,
   verdict: Verdict
-): DistilledMemory | null {
+): DistilledMemory[] {
   const steps = trajectory.steps || [];
   const isSuccess = verdict.label === 'Success';
 
-  // Try to identify the type of work from the query
-  const fileMatch = query.match(/(?:Edit|Write|Modify)\s+(\S+)/i);
-  const commandMatch = query.match(/^(.+?)(?:\s+\d+)?$/);
-
-  // For failures: the error itself is the insight
+  // For failures: extract the actual error message as the insight
   if (!isSuccess) {
-    return {
-      title: `Failed: ${summarize(query, 60)}`,
-      description: `This approach failed — avoid or adjust.`,
-      content: buildFailureContent(query, steps),
+    return extractFailurePatterns(query, steps);
+  }
+
+  // For successes: extract what was done and why it worked
+  return extractSuccessPatterns(query, steps);
+}
+
+/**
+ * Extract insights from failed trajectories.
+ * The error message itself is the most valuable part.
+ */
+function extractFailurePatterns(query: string, steps: any[]): DistilledMemory[] {
+  const errors = extractErrors(steps);
+  const context = inferContext(query);
+
+  // If we found specific error messages, those are the insights
+  if (errors.length > 0) {
+    return [{
+      title: `Avoid: ${summarize(query, 60)}`,
+      description: `This approach failed during ${context}.`,
+      content: [
+        `When: ${context}`,
+        `Attempted: ${summarize(query, 200)}`,
+        `Error: ${errors.join('; ')}`,
+        `Lesson: This approach does not work — try an alternative.`,
+      ].join('\n'),
       tags: ['failure', 'avoid', ...extractTags(query)],
-    };
+    }];
   }
 
-  // For successful edits: capture what was changed and where
-  if (fileMatch) {
-    const file = fileMatch[1];
-    return {
+  // No specific errors found — only store if query itself is informative
+  if (query.length < 20) return [];
+
+  return [{
+    title: `Failed: ${summarize(query, 60)}`,
+    description: `This approach failed during ${context}.`,
+    content: [
+      `When: ${context}`,
+      `Attempted: ${summarize(query, 200)}`,
+      `Lesson: This failed — consider prerequisites or alternative approaches.`,
+    ].join('\n'),
+    tags: ['failure', 'avoid', ...extractTags(query)],
+  }];
+}
+
+/**
+ * Extract insights from successful trajectories.
+ * Groups related steps and identifies the high-level pattern.
+ */
+function extractSuccessPatterns(query: string, steps: any[]): DistilledMemory[] {
+  const context = inferContext(query);
+  const memories: DistilledMemory[] = [];
+
+  // Identify files that were modified
+  const modifiedFiles = extractModifiedFiles(steps);
+
+  // Identify meaningful commands (filter out mechanical ones)
+  const meaningfulSteps = steps.filter(s => !isMechanicalStep(s));
+
+  // If we have file modifications, describe what was changed
+  if (modifiedFiles.length > 0) {
+    const fileList = modifiedFiles.slice(0, 5).join(', ');
+    memories.push({
       title: `Pattern: ${summarize(query, 60)}`,
-      description: `Successful modification to ${file}.`,
-      content: `When working on ${file}: ${query}`,
+      description: `Successfully modified ${modifiedFiles.length} file(s) during ${context}.`,
+      content: [
+        `When: ${context}`,
+        `Files: ${fileList}`,
+        `Approach: ${summarize(query, 200)}`,
+        `Outcome: Success`,
+      ].join('\n'),
       tags: ['success', 'edit', ...extractTags(query)],
-    };
+    });
+    return memories;
   }
 
-  // For successful commands: capture the approach
-  if (query.length >= 20) {
-    return {
+  // For non-file tasks, capture the approach if the query is informative
+  if (query.length >= 20 && meaningfulSteps.length > 0) {
+    memories.push({
       title: `Approach: ${summarize(query, 60)}`,
-      description: isSuccess
-        ? 'This approach worked.'
-        : 'This approach failed.',
-      content: `When: ${inferContext(query)}\nDo: ${query}\nOutcome: ${verdict.label}`,
-      tags: [verdict.label.toLowerCase(), ...extractTags(query)],
-    };
+      description: `This approach worked for ${context}.`,
+      content: [
+        `When: ${context}`,
+        `Approach: ${summarize(query, 200)}`,
+        meaningfulSteps.length <= 3
+          ? `Steps: ${meaningfulSteps.map(s => summarize(s.command || s.action || '?', 80)).join(' → ')}`
+          : `Steps: ${meaningfulSteps.length} meaningful operations`,
+        `Outcome: Success`,
+      ].join('\n'),
+      tags: ['success', ...extractTags(query)],
+    });
   }
 
-  return null;
+  return memories;
+}
+
+/**
+ * Extract actual error messages from trajectory steps.
+ * Returns deduplicated, truncated error strings.
+ */
+function extractErrors(steps: any[]): string[] {
+  const errors: string[] = [];
+  const seen = new Set<string>();
+
+  for (const step of steps) {
+    // Check stderr / error field
+    for (const field of ['error', 'stderr', 'output']) {
+      const text = step[field];
+      if (!text || typeof text !== 'string') continue;
+
+      // Extract the first meaningful error line
+      const errorLine = text.split('\n')
+        .map((l: string) => l.trim())
+        .find((l: string) =>
+          /error|fail|exception|denied|refused|not found|cannot|unable/i.test(l)
+          && l.length > 10
+          && l.length < 300
+        );
+
+      if (errorLine) {
+        const normalized = errorLine.substring(0, 200);
+        if (!seen.has(normalized)) {
+          seen.add(normalized);
+          errors.push(normalized);
+        }
+      }
+    }
+
+    // Non-zero exit code without a captured error
+    if (step.exitCode != null && step.exitCode !== 0 && errors.length === 0) {
+      errors.push(`Exit code ${step.exitCode}`);
+    }
+  }
+
+  return errors.slice(0, 3); // Max 3 distinct errors
+}
+
+/**
+ * Extract file paths that were modified during the trajectory.
+ */
+function extractModifiedFiles(steps: any[]): string[] {
+  const files = new Set<string>();
+
+  for (const step of steps) {
+    // From Edit/Write actions
+    const cmd = step.command || step.action || '';
+    const fileMatch = cmd.match(/(?:Edit|Write|Modify)\s+(\S+)/i);
+    if (fileMatch) files.add(fileMatch[1]);
+
+    // From file_path field
+    if (step.file_path) files.add(step.file_path);
+    if (step.filePath) files.add(step.filePath);
+  }
+
+  return Array.from(files);
 }
 
 /** Summarize a string to maxLen, breaking at word boundaries */
@@ -320,21 +468,6 @@ function summarize(text: string, maxLen: number): string {
   const truncated = text.substring(0, maxLen);
   const lastSpace = truncated.lastIndexOf(' ');
   return (lastSpace > maxLen * 0.5 ? truncated.substring(0, lastSpace) : truncated) + '...';
-}
-
-/** Build useful failure content from query and steps */
-function buildFailureContent(query: string, steps: any[]): string {
-  const parts = [`Attempted: ${query}`];
-  for (const step of steps) {
-    if (step.exitCode && step.exitCode !== 0) {
-      parts.push(`Exit code: ${step.exitCode}`);
-    }
-    if (step.error) {
-      parts.push(`Error: ${String(step.error).substring(0, 200)}`);
-    }
-  }
-  parts.push('Consider an alternative approach or check prerequisites.');
-  return parts.join('\n');
 }
 
 /** Infer context from the command/description */

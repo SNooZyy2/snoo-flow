@@ -2,6 +2,7 @@
 # Post-task: record meaningful command outcomes for learning.
 # Shared by PostToolUse[Bash] and PostToolUseFailure[Bash].
 SNOO="$(cd "$(dirname "$0")/../.." && pwd)"
+[ -f "$SNOO/.env.local" ] && set -a && . "$SNOO/.env.local" && set +a
 TSX="$SNOO/node_modules/.bin/tsx"
 
 INPUT=$(cat)

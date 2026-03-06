@@ -40,8 +40,23 @@ export async function consolidate(): Promise<ConsolidationResult> {
   // Step 2: Detect contradictions
   contradictionsFound = await detectContradictions(memories, config.consolidate.contradiction_threshold);
 
-  // Step 3: Prune old, unused memories
-  itemsPruned = db.pruneOldMemories({
+  // Step 3: Prune heavily-contradicted memories (low confidence, many contradictions)
+  const contradictionCounts = db.getContradictionCounts();
+  const maxContradictions = 5;
+  for (const [memId, count] of contradictionCounts) {
+    if (count >= maxContradictions) {
+      const mem = memories.find(m => m.id === memId);
+      // Only prune if low-usage (high-usage contradictions need manual review)
+      if (mem && (mem.usage_count || 0) <= 1) {
+        db.deleteMemory(memId);
+        itemsPruned++;
+        console.log(`[INFO] Pruned contradicted memory (${count} contradictions): ${mem.pattern_data?.title || memId}`);
+      }
+    }
+  }
+
+  // Step 4: Prune old, unused memories
+  itemsPruned += db.pruneOldMemories({
     maxAgeDays: config.consolidate.prune_age_days,
     minConfidence: config.consolidate.min_confidence_keep
   });

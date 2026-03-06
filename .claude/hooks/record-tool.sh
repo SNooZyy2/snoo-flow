@@ -2,6 +2,7 @@
 # Post-task: record Edit/Write/Agent outcomes for learning.
 # Matched by PostToolUse and PostToolUseFailure for non-Bash tools.
 SNOO="$(cd "$(dirname "$0")/../.." && pwd)"
+[ -f "$SNOO/.env.local" ] && set -a && . "$SNOO/.env.local" && set +a
 TSX="$SNOO/node_modules/.bin/tsx"
 
 INPUT=$(cat)
