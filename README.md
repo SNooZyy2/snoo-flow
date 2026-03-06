@@ -166,6 +166,10 @@ npm run embed-server:stop
 npm run embed-server:start
 ```
 
+## Using snoo-flow in Other Projects
+
+For a ready-to-paste `CLAUDE.md` template that teaches agents how to use snoo-flow (without exploring its source), see [docs/AGENT-INSTRUCTIONS.md](docs/AGENT-INSTRUCTIONS.md).
+
 ## Technical Details
 
 For architecture docs, database schema, configuration options, embedding server internals, and the retrieval algorithm — see [docs/TECHNICAL.md](docs/TECHNICAL.md).
