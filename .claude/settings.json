@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/retrieve.sh",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/retrieve.sh\"",
             "timeout": 5000
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/record.sh",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/record.sh\"",
             "timeout": 5000
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/record-tool.sh",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/record-tool.sh\"",
             "timeout": 5000
           }
         ]
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/record.sh",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/record.sh\"",
             "timeout": 5000
           }
         ]
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/record-tool.sh",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/record-tool.sh\"",
             "timeout": 5000
           }
         ]
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/consolidate.sh",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/consolidate.sh\"",
             "timeout": 10000
           }
         ]
