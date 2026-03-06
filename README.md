@@ -124,9 +124,15 @@ npx tsx scripts/run.ts pre "fix TypeScript import errors"
 npx tsx scripts/run.ts post "refactored auth module" 0    # 0 = success
 npx tsx scripts/run.ts post "migration failed" 1           # 1 = failure
 
+# Check if learning hooks are actually working
+npx tsx scripts/run.ts log        # show last 20 retrieval events
+npx tsx scripts/run.ts log 5      # show last 5
+
 # Run memory cleanup manually
 npx tsx scripts/run.ts consolidate
 ```
+
+The `log` command shows every time snoo-flow retrieved memories for a prompt — including how many memories were found, how long it took, and the top matches with their scores. If you see entries appearing here, the hooks are working.
 
 ## How the Learning Works
 
